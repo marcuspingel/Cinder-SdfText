@@ -236,6 +236,16 @@ public:
 	std::vector<std::pair<SdfText::Font::Glyph,vec2>>		getGlyphPlacements( const std::string &str, const Rectf &fitRect, const DrawOptions &options = DrawOptions() ) const;
 	//! Returns a  word-wrapped vector of glyph/placement pairs representing \a str fit inside \a fitRect, suitable for use with drawGlyphs. Useful for caching placement and optimizing batching. Mac & iOS only.
 	std::vector<std::pair<SdfText::Font::Glyph,vec2>>		getGlyphPlacementsWrapped( const std::string &str, const Rectf &fitRect, const DrawOptions &options = DrawOptions() ) const;
+	
+	struct InstanceVertex {
+		vec2 pos;
+		vec2 size;
+		vec4 texCoords;
+	};
+	
+	std::vector<InstanceVertex> getGlyphVertices( const SdfText::Font::GlyphMeasures &glyphs, const DrawOptions &options = DrawOptions(), const std::vector<ColorA8u> &colors = std::vector<ColorA8u>()  );
+	
+	const ci::gl::GlslProgRef& getDefaultGlslProg() const;
 
 	//! Returns the font the TextureFont represents
 	const SdfText::Font&	getFont() const { return mFont; }
@@ -252,13 +262,86 @@ public:
 
 	uint32_t				getNumTextures() const;
 	const gl::TextureRef&	getTexture( uint32_t n ) const;
+	
+	// =================================================================================================
+	// SdfText::TextureAtlas
+	// =================================================================================================
+	class TextureAtlas {
+	public:
+		
+		struct GlyphInfo {
+			uint32_t	mTextureIndex;
+			Area		mTexCoords;
+			vec2		mOriginOffset;
+		};
+		
+		// ---------------------------------------------------------------------------------------------
+		
+		using CharToGlyphMap = std::unordered_map<uint32_t, SdfText::Font::Glyph>;
+		using GlyphToCharMap = std::unordered_map<SdfText::Font::Glyph, uint32_t>;
+		using GlyphInfoMap = std::unordered_map<SdfText::Font::Glyph, GlyphInfo>;
+		
+		// ---------------------------------------------------------------------------------------------
+		
+		struct CacheKey {
+			std::string mFamilyName;
+			std::string mStyleName;
+			std::string mUtf8Chars;
+			ivec2		mTextureSize = ivec2( 0 );
+			ivec2		mSdfBitmapSize = ivec2( 0 );
+			bool operator==( const CacheKey& rhs ) const {
+				return ( mFamilyName == rhs.mFamilyName ) &&
+				( mStyleName == rhs.mStyleName ) &&
+				( mUtf8Chars == rhs.mUtf8Chars ) &&
+				( mTextureSize == rhs.mTextureSize ) &&
+				( mSdfBitmapSize == rhs.mSdfBitmapSize );
+			}
+			bool operator!=( const CacheKey& rhs ) const {
+				return ( mFamilyName != rhs.mFamilyName ) ||
+				( mStyleName != rhs.mStyleName ) ||
+				( mUtf8Chars != rhs.mUtf8Chars ) ||
+				( mTextureSize != rhs.mTextureSize ) ||
+				( mSdfBitmapSize != rhs.mSdfBitmapSize );
+			}
+		};
+		
+		typedef std::vector<std::pair<CacheKey, std::shared_ptr<TextureAtlas>>> AtlasCacher;
+		
+		// ---------------------------------------------------------------------------------------------
+		
+		virtual ~TextureAtlas() {}
+		
+		static std::shared_ptr<TextureAtlas> create( FT_Face face, const SdfText::Format &format, const std::string &utf8Chars );
+		
+		static ivec2 calculateSdfBitmapSize( const vec2 &sdfScale, const ivec2& sdfPadding, const vec2 &maxGlyphSize );
+		
+	private:
+		TextureAtlas( FT_Face face, const SdfText::Format &format, const std::string &utf8Chars );
+		friend class SdfText;
+		
+		FT_Face						mFace = nullptr;
+		std::vector<gl::TextureRef>	mTextures;
+		CharToGlyphMap				mCharToGlyph;
+		GlyphToCharMap				mGlyphToChar;
+		GlyphInfoMap				mGlyphInfo;
+		
+		//! Base scale that SDF generator uses is size 32 at 72 DPI. A scale of 1.5, 2.0, and 3.0 translates to size 48, 64 and 96 and 72 DPI.
+		vec2						mSdfScale = vec2( 1.0f );
+		vec2						mSdfPadding = vec2( 2.0f );
+		ivec2						mSdfBitmapSize = ivec2( 0 );
+		vec2						mMaxGlyphSize = vec2( 0.0f );
+		float						mMaxAscent = 0.0f;
+		float						mMaxDescent = 0.0f;
+		
+	};
+	using TextureAtlasRef = std::shared_ptr<TextureAtlas>;
+	
+	const TextureAtlas::GlyphInfoMap& getAtlasGlypInfo() const;
+	std::pair<ci::vec2, ci::vec2> getSdfScalePadding() const;
 
 private:
 	SdfText( const SdfText::Font &font, const Format &format, const std::string &utf8Chars );
 	friend class SdfTextManager;
-
-	class TextureAtlas;
-	using TextureAtlasRef = std::shared_ptr<TextureAtlas>;
 
 	SdfText::Font					mFont;
 	Format							mFormat;
