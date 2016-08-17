@@ -307,7 +307,7 @@ SdfText::TextureAtlas::TextureAtlas( FT_Face face, const SdfText::Format &format
 		++currentTextureIndex;
 
 		// Debug output
-		//writeImage( "sdfText_" + std::to_string( atlasIndex ) + ".png", surface );
+		//writeImage( getHomeDirectory() / ("sdfText_" + std::to_string( atlasIndex ) + ".png"), surface );
 
 		// Reset
 		ip::fill( &surface, Color8u( 0, 0, 0 ) );		
@@ -1187,7 +1187,7 @@ std::vector<SdfText::InstanceVertex> SdfText::getGlyphVertices( const SdfText::F
 	const vec2 fontRenderScale = vec2( mFont.getSize() ) / ( 32.0f * mTextureAtlases->mSdfScale );
 	const vec2 fontOriginScale = vec2( mFont.getSize() ) / 32.0f;
 	
-	vec2 baseline = vec2( 0, fontOriginScale.y / mFont.getAscent() );
+	vec2 baseline = vec2( 0, 0 );
 	
 	std::vector<SdfText::InstanceVertex> ret;
 	ret.reserve( glyphMeasures.size() );
@@ -1233,6 +1233,7 @@ std::vector<SdfText::InstanceVertex> SdfText::getGlyphVertices( const SdfText::F
 			
 			InstanceVertex vert;
 			vert.pos = vec2( destRect.x1, destRect.y1 );
+			std::cout << destRect << std::endl;
 			vert.size = destRect.getSize();
 			vert.texCoords = vec4( srcTexCoords.x1, srcTexCoords.y1, srcTexCoords.x2, srcTexCoords.y2 );
 			ret.emplace_back( std::move( vert ) );
