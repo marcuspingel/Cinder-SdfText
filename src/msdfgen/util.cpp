@@ -23,6 +23,7 @@ bool getFontWhitespaceWidth(double &spaceAdvance, double &tabAdvance, FT_Face fa
     tabAdvance = face->glyph->advance.x/64.;
     return true;
 }
+	
 
 bool loadGlyph(Shape &output, FT_Face face, unsigned int glyphIndex, double *advance) {
     enum PointType {
@@ -32,6 +33,17 @@ bool loadGlyph(Shape &output, FT_Face face, unsigned int glyphIndex, double *adv
         CUBIC_POINT,
         CUBIC_POINT2
     };
+	
+	auto pointTypeOutput = []( PointType type ) {
+		switch ( type ) {
+			case NONE: return "NONE"; break;
+			case PATH_POINT: return "PATH_POINT"; break;
+			case QUADRATIC_POINT: return "QUADRATIC_POINT"; break;
+			case CUBIC_POINT: return "CUBIC_POINT"; break;
+			case CUBIC_POINT2: return "CUBIC_POINT2"; break;
+			default: return "unknown"; break;
+		}
+	};
 
     if (nullptr == face)
         return false;
@@ -42,7 +54,9 @@ bool loadGlyph(Shape &output, FT_Face face, unsigned int glyphIndex, double *adv
     output.inverseYAxis = false;
     if (advance)
         *advance = face->glyph->advance.x/64.;
-
+	
+	float glyphScale = 2048.0f / face->units_per_EM;
+	
     int last = -1;
     // For each contour
     for (int i = 0; i < face->glyph->outline.n_contours; ++i) {
@@ -63,14 +77,22 @@ bool loadGlyph(Shape &output, FT_Face face, unsigned int glyphIndex, double *adv
                 round++;
             }
 
-            Point2 point(face->glyph->outline.points[index].x/64., face->glyph->outline.points[index].y/64.);
-            PointType pointType = face->glyph->outline.tags[index]&1 ? PATH_POINT : face->glyph->outline.tags[index]&2 ? CUBIC_POINT : QUADRATIC_POINT;
-
-            switch (state) {
+            Point2 point( glyphScale * face->glyph->outline.points[index].x/64.,
+						  glyphScale * face->glyph->outline.points[index].y/64.);
+            PointType pointType = face->glyph->outline.tags[index]&1 ? PATH_POINT
+								: (face->glyph->outline.tags[index]&2 ? CUBIC_POINT : QUADRATIC_POINT);
+			
+			if( glyphIndex == 82 ) {
+//				std::cout << "state: " << pointTypeOutput( state ) << std::endl;
+//				std::cout << "pointType: " << pointTypeOutput( pointType ) << std::endl;
+			}
+			switch (state) {
                 case NONE:
-                    REQUIRE(pointType == PATH_POINT);
+//                    if (!(pointType == PATH_POINT))
+//						return false;
                     startPoint = point;
                     state = PATH_POINT;
+					//std::cout << "In NONE: changing state to PATH_POINT" << std::endl;
                     break;
                 case PATH_POINT:
                     if (pointType == PATH_POINT) {
@@ -80,9 +102,11 @@ bool loadGlyph(Shape &output, FT_Face face, unsigned int glyphIndex, double *adv
                         controlPoint[0] = point;
                         state = pointType;
                     }
+					//std::cout << "In PATH_POINT: state: " << pointTypeOutput( state ) << std::endl;
                     break;
                 case QUADRATIC_POINT:
-                    REQUIRE(pointType != CUBIC_POINT);
+                    if (!(pointType != CUBIC_POINT))
+						return false;
                     if (pointType == PATH_POINT) {
                         contour.addEdge(new QuadraticSegment(startPoint, controlPoint[0], point));
                         startPoint = point;
@@ -93,14 +117,18 @@ bool loadGlyph(Shape &output, FT_Face face, unsigned int glyphIndex, double *adv
                         startPoint = midPoint;
                         controlPoint[0] = point;
                     }
+					//std::cout << "In QUADRATIC_POINT: state: " << pointTypeOutput( state ) << std::endl;
                     break;
                 case CUBIC_POINT:
-                    REQUIRE(pointType == CUBIC_POINT);
+                    if (!(pointType == CUBIC_POINT))
+						return false;
                     controlPoint[1] = point;
-                    state = CUBIC_POINT2;
+					state = CUBIC_POINT2;
+					//std::cout << "In CUBIC_POINT: state: " << pointTypeOutput( state ) << std::endl;
                     break;
                 case CUBIC_POINT2:
-                    REQUIRE(pointType != QUADRATIC_POINT);
+                    if (!(pointType != QUADRATIC_POINT))
+						return false;
                     if (pointType == PATH_POINT) {
                         contour.addEdge(new CubicSegment(startPoint, controlPoint[0], controlPoint[1], point));
                         startPoint = point;
@@ -110,7 +138,8 @@ bool loadGlyph(Shape &output, FT_Face face, unsigned int glyphIndex, double *adv
                         startPoint = midPoint;
                         controlPoint[0] = point;
                     }
-                    state = pointType;
+					state = pointType;
+					//std::cout << "In CUBIC_POINT2: state: " << pointTypeOutput( state ) << std::endl;
                     break;
             }
 

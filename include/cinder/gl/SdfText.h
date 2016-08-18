@@ -238,6 +238,7 @@ public:
 	std::vector<std::pair<SdfText::Font::Glyph,vec2>>		getGlyphPlacementsWrapped( const std::string &str, const Rectf &fitRect, const DrawOptions &options = DrawOptions() ) const;
 	
 	struct InstanceVertex {
+		Font::Glyph glyph;
 		vec2 pos;
 		vec2 size;
 		vec4 texCoords;
@@ -252,9 +253,12 @@ public:
     //! Returns the name of the font
     std::string				getName() const { return mFont.getName(); }
 	//! Returns the ascent of the font
-	float					getAscent() const { return mFont.getAscent(); }
+	float					getAscent() const { return mFont.getAscent() * mFont.getSize() / 32.0f; }
 	//! Returns the descent of the font
-	float					getDescent() const { return mFont.getDescent(); }
+	float					getDescent() const { return mFont.getDescent() * mFont.getSize() / 32.0f; }
+	float					getHeight() const { return mFont.getHeight() * mFont.getSize() / 32.0f; }
+	//! Returns the leading of the font
+ 	float					getLeading() const { return mFont.getLeading() * mFont.getSize() / 32.0f; }
 
 	//! Returns the default set of characters for a TextureFont, suitable for most English text, including some common ligatures and accented vowels.
 	//! \c "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890().?!,:;'\"&*=+-/\\@#_[]<>%^llflfiphridséáèà"

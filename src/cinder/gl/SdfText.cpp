@@ -193,9 +193,12 @@ SdfText::TextureAtlas::TextureAtlas( FT_Face face, const SdfText::Format &format
 			mMaxGlyphSize.y = std::max( mMaxGlyphSize.y, bounds.getHeight() );
 			// Max ascent, descent
 			mMaxAscent = std::max( mMaxAscent, static_cast<float>( t ) );
-			mMaxDescent = std::max( mMaxAscent, static_cast<float>( std::fabs( b ) ) );
+			mMaxDescent = std::max( mMaxDescent, static_cast<float>( std::fabs( b ) ) );
 			//CI_LOG_I( (char)ch << " : " << mGlyphInfo[glyphIndex].mOriginOffset );
-		}	
+		}
+		else {
+			CI_LOG_E( "Couldn't load glyph: " << ch );
+		}
 	}
 
 	// Determine render bitmap size
@@ -474,7 +477,8 @@ SdfTextManager* SdfTextManager::instance()
 	if( nullptr == SdfTextManager::sInstance ) {
 		SdfTextManager::sInstance =  new SdfTextManager();
 		if( nullptr != SdfTextManager::sInstance ) {
-			ci::app::App::get()->getSignalShouldQuit().connect( SdfTextFontManager_destroyStaticInstance );
+			// problematic
+			//ci::app::App::get()->getSignalShouldQuit().connect( SdfTextFontManager_destroyStaticInstance );
 		}
 	}
 	
@@ -583,7 +587,7 @@ void SdfTextManager::acquireFontNamesAndPaths()
 				}
 			}
 		}
-	} 
+	}
 	while( ERROR_NO_MORE_ITEMS != result  );
 
 	delete [] valueName;
@@ -998,7 +1002,8 @@ public:
 			if( FT_Err_Ok != ftRes ) {
 				throw std::runtime_error("Failed to load font data");
 			}
-
+			auto kern = FT_HAS_KERNING( mFace );
+			CI_LOG_E( "Kern: " << kern << " font: " << dataSource->getFilePath().filename() );
 			fontManager->faceCreated( mFace );
 		}
 	}
@@ -1080,25 +1085,29 @@ void SdfText::Font::loadFontData( const ci::DataSourceRef &dataSource )
 
 float SdfText::Font::getHeight() const
 {
-	float result = ( mData->getFace()->height / 64.0f );
+	float glyphScale = 2048.0f / mData->getFace()->units_per_EM;
+	float result = glyphScale * ( mData->getFace()->height / 64.0f );
 	return result;
 }
 
 float SdfText::Font::getLeading() const
 {
-	float result = ( mData->getFace()->height - ( std::abs( mData->getFace()->ascender ) + std::abs( mData->getFace()->descender ) ) ) / 64.0f;
+	float glyphScale = 2048.0f / mData->getFace()->units_per_EM;
+	float result = glyphScale * ( mData->getFace()->height - ( std::abs( mData->getFace()->ascender ) + std::abs( mData->getFace()->descender ) ) ) / 64.0f;
 	return result;
 }
 
 float SdfText::Font::getAscent() const
 {
-	float result = std::fabs( mData->getFace()->ascender / 64.0f );
+	float glyphScale = 2048.0f / mData->getFace()->units_per_EM;
+	float result = glyphScale * std::fabs( mData->getFace()->ascender / 64.0f );
 	return result;
 }
 
 float SdfText::Font::getDescent() const
 {
-	float result = std::fabs( mData->getFace()->descender / 64.0f );
+	float glyphScale = 2048.0f / mData->getFace()->units_per_EM;
+	float result = glyphScale * std::fabs( mData->getFace()->descender / 64.0f );
 	return result;
 }
 
@@ -1232,8 +1241,8 @@ std::vector<SdfText::InstanceVertex> SdfText::getGlyphVertices( const SdfText::F
 			destRect += baseline;
 			
 			InstanceVertex vert;
+			vert.glyph = glyphIt->first;
 			vert.pos = vec2( destRect.x1, destRect.y1 );
-			std::cout << destRect << std::endl;
 			vert.size = destRect.getSize();
 			vert.texCoords = vec4( srcTexCoords.x1, srcTexCoords.y1, srcTexCoords.x2, srcTexCoords.y2 );
 			ret.emplace_back( std::move( vert ) );
@@ -1654,12 +1663,12 @@ std::string SdfText::defaultChars()
 void SdfText::cacheGlyphMetrics()
 {
 	FT_Face face = mFont.getFace();
-	for( const auto it : mTextureAtlases->mCharToGlyph ) {
+	for( const auto &it : mTextureAtlases->mCharToGlyph ) {
 		SdfText::Font::Glyph glyphIndex = it.second;
 		FT_Load_Glyph( face, glyphIndex, FT_LOAD_DEFAULT );
 		FT_GlyphSlot slot = face->glyph;
 		SdfText::Font::GlyphMetrics glyphMetrics;
-		glyphMetrics.advance = vec2( slot->linearHoriAdvance , slot->linearVertAdvance ) / 65536.0f;
+		glyphMetrics.advance = vec2( slot->linearHoriAdvance, slot->linearVertAdvance ) / 65536.0f;
 		mCachedGlyphMetrics[glyphIndex] = glyphMetrics;
 	}
 }
