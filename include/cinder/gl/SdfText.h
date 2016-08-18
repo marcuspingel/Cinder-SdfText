@@ -244,7 +244,7 @@ public:
 		vec4 texCoords;
 	};
 	
-	std::vector<InstanceVertex> getGlyphVertices( const SdfText::Font::GlyphMeasures &glyphs, const DrawOptions &options = DrawOptions(), const std::vector<ColorA8u> &colors = std::vector<ColorA8u>()  );
+	std::vector<InstanceVertex> getGlyphVertices( const SdfText::Font::GlyphMeasures &glyphs, ci::Rectf *rect, const DrawOptions &options = DrawOptions(), const std::vector<ColorA8u> &colors = std::vector<ColorA8u>()  );
 	
 	const ci::gl::GlslProgRef& getDefaultGlslProg() const;
 

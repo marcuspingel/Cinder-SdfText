@@ -1177,7 +1177,7 @@ SdfTextRef SdfText::create( const SdfText::Font &font, const Format &format, con
 	return result;
 }
 	
-std::vector<SdfText::InstanceVertex> SdfText::getGlyphVertices( const SdfText::Font::GlyphMeasures &glyphMeasures, const DrawOptions &options, const std::vector<ColorA8u> &colors )
+std::vector<SdfText::InstanceVertex> SdfText::getGlyphVertices( const SdfText::Font::GlyphMeasures &glyphMeasures, ci::Rectf *rect,  const DrawOptions &options, const std::vector<ColorA8u> &colors )
 {
 	const auto& textures = mTextureAtlases->mTextures;
 	const auto& glyphMap = mTextureAtlases->mGlyphInfo;
@@ -1200,6 +1200,9 @@ std::vector<SdfText::InstanceVertex> SdfText::getGlyphVertices( const SdfText::F
 	
 	std::vector<SdfText::InstanceVertex> ret;
 	ret.reserve( glyphMeasures.size() );
+	
+	Rectf boundingRect;
+	bool set = false;
 	
 	const float scale = options.getScale();
 	for( size_t texIdx = 0; texIdx < textures.size(); ++texIdx ) {
@@ -1240,6 +1243,13 @@ std::vector<SdfText::InstanceVertex> SdfText::getGlyphVertices( const SdfText::F
 			destRect += glyphIt->second * scale;
 			destRect += baseline;
 			
+			if( ! set ) {
+				boundingRect.set( destRect.x1, destRect.y1, destRect.x2, destRect.y2 );
+				set = true;
+			}
+			else
+				boundingRect.include( destRect );
+			
 			InstanceVertex vert;
 			vert.glyph = glyphIt->first;
 			vert.pos = vec2( destRect.x1, destRect.y1 );
@@ -1248,6 +1258,10 @@ std::vector<SdfText::InstanceVertex> SdfText::getGlyphVertices( const SdfText::F
 			ret.emplace_back( std::move( vert ) );
 		}
 	}
+	
+	if( rect )
+		*rect = boundingRect;
+	
 	return ret;
 }
 
