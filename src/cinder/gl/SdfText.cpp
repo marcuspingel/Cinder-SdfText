@@ -1002,8 +1002,6 @@ public:
 			if( FT_Err_Ok != ftRes ) {
 				throw std::runtime_error("Failed to load font data");
 			}
-			auto kern = FT_HAS_KERNING( mFace );
-			CI_LOG_E( "Kern: " << kern << " font: " << dataSource->getFilePath().filename() );
 			fontManager->faceCreated( mFace );
 		}
 	}
