@@ -1233,6 +1233,7 @@ std::vector<SdfText::InstanceVertex> SdfText::getGlyphVertices( const SdfText::F
 			float tx = sdfPadding.x;
 			float ty = std::fabs( originOffset.y ) + sdfPadding.y;
 			offset += scale * sdfScale * vec2( -tx, ty );
+			
 			// Use origin scale for horizontal offset
 			offset += scale * fontOriginScale * vec2( originOffset.x, 0.0f );
 			destRect += offset;
@@ -1242,15 +1243,21 @@ std::vector<SdfText::InstanceVertex> SdfText::getGlyphVertices( const SdfText::F
 			destRect += baseline;
 			
 			if( ! set ) {
-				boundingRect.set( destRect.x1, destRect.y1, destRect.x2, destRect.y2 );
+				boundingRect.set( destRect.x1, destRect.y1, (destRect.x2 - destRect.x1) / 2.0f + destRect.x1, destRect.y2 );
 				set = true;
 			}
-			else
-				boundingRect.include( destRect );
+			else {
+				Rectf copy = destRect;
+				// this needs to be here because we're adding the full rect and most likely
+				// the letter is pretty small within that rect.
+				if( glyphIt == glyphMeasures.end() )
+					copy.set( destRect.x1, destRect.y1, destRect.x2 / 2.0, destRect.y2 );
+				boundingRect.include( copy );
+			}
 			
 			InstanceVertex vert;
 			vert.glyph = glyphIt->first;
-			vert.pos = vec2( destRect.x1, destRect.y1 );
+			vert.pos = destRect.getUpperLeft() + (destRect.getSize() / 2.0f);
 			vert.size = destRect.getSize();
 			vert.texCoords = vec4( srcTexCoords.x1, srcTexCoords.y1, srcTexCoords.x2, srcTexCoords.y2 );
 			ret.emplace_back( std::move( vert ) );
