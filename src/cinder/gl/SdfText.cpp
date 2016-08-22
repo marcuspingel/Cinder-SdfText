@@ -1242,6 +1242,8 @@ std::vector<SdfText::InstanceVertex> SdfText::getGlyphVertices( const SdfText::F
 			destRect += glyphIt->second * scale;
 			destRect += baseline;
 			
+			destRect.transform( glm::toMat3( glm::quat( toRadians( 180.0f ), vec3( 1, 0, 0 ) ) ) );
+			
 			if( ! set ) {
 				boundingRect.set( destRect.x1, destRect.y1, (destRect.x2 - destRect.x1) / 2.0f + destRect.x1, destRect.y2 );
 				set = true;
