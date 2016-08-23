@@ -946,7 +946,7 @@ SdfText::Font::GlyphMeasures SdfTextBox::measureGlyphs( const SdfText::Font::Gly
 	const float leading       = drawOptions.getLeading();
 	const float drawScale	  = drawOptions.getScale();
 	const float lineHeight    = fontSizeScale * drawScale * ( ascent + descent + leading );
-
+	
 	float curY = 0;
 	for( std::vector<std::string>::const_iterator lineIt = mLines.begin(); lineIt != mLines.end(); ++lineIt ) {
 		std::u32string utf32Chars = ci::toUtf32( *lineIt );
@@ -1245,15 +1245,15 @@ std::vector<SdfText::InstanceVertex> SdfText::getGlyphVertices( const SdfText::F
 			destRect.transform( glm::toMat3( glm::quat( toRadians( 180.0f ), vec3( 1, 0, 0 ) ) ) );
 			
 			if( ! set ) {
-				boundingRect.set( destRect.x1, destRect.y1, (destRect.x2 - destRect.x1) / 2.0f + destRect.x1, destRect.y2 );
+				boundingRect.set( destRect.x1, destRect.y1, destRect.x2, destRect.y2 );
 				set = true;
 			}
 			else {
 				Rectf copy = destRect;
 				// this needs to be here because we're adding the full rect and most likely
 				// the letter is pretty small within that rect.
-				if( glyphIt == glyphMeasures.end() )
-					copy.set( destRect.x1, destRect.y1, destRect.x2 / 2.0, destRect.y2 );
+				if( glyphIt + 2 == glyphMeasures.end() || glyphIt + 1 == glyphMeasures.end() )
+					copy.set( destRect.x1, destRect.y1, (destRect.x2 - destRect.x1) / 2.0f + destRect.x1, destRect.y2 );
 				boundingRect.include( copy );
 			}
 			
