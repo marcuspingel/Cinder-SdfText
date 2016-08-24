@@ -1252,7 +1252,7 @@ std::vector<SdfText::InstanceVertex> SdfText::getGlyphVertices( const SdfText::F
 				Rectf copy = destRect;
 				// this needs to be here because we're adding the full rect and most likely
 				// the letter is pretty small within that rect.
-				if( glyphIt + 2 == glyphMeasures.end() || glyphIt + 1 == glyphMeasures.end() )
+				if( glyphIt + 1 == glyphMeasures.end() )
 					copy.set( destRect.x1, destRect.y1, (destRect.x2 - destRect.x1) / 2.0f + destRect.x1, destRect.y2 );
 				boundingRect.include( copy );
 			}
