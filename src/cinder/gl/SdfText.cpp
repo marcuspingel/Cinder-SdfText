@@ -158,7 +158,11 @@ SdfText::TextureAtlas::TextureAtlas( FT_Face face, const SdfText::Format &format
 	: mFace( face ), mSdfScale( format.getSdfScale() ), mSdfPadding( format.getSdfPadding() )
 {
 	const ivec2& tileSpacing = format.getSdfTileSpacing();
-
+	
+	// CW (TTF) vs CCW (OTF) - SDF needs to be inverted if font is OTF
+	bool invertSdf = ( std::string( "OTTO" ) ==  std::string( reinterpret_cast<const char *>( face->stream->base ) ) );
+ 
+	// Convert characters from UTF8 to UTF32
 	std::u32string utf32Chars = ci::toUtf32( utf8Chars );
 	// Add a space if needed
 	if( std::string::npos == utf8Chars.find( ' ' ) ) {
@@ -284,6 +288,19 @@ SdfText::TextureAtlas::TextureAtlas( FT_Face face, const SdfText::Format &format
 				float ty = std::fabs( originOffset.y ) + mSdfPadding.y;
 				// mSdfScale will get applied to <tx, ty> by msdfgen
 				msdfgen::generateMSDF( sdfBitmap, shape, sdfRange, msdfgen::Vector2( mSdfScale.x, mSdfScale.y ), msdfgen::Vector2( tx, ty ) );
+				
+				// Invert the SDF if needed, but only for glyphs that have contours to render.
+				// Glyph without contours will produce and blank bitmap, inverting this produces
+				// a solid block. Which is undesirable.
+				if( invertSdf && ( ! shape.contours.empty() ) ) {
+					for( int y = 0; y < sdfBitmap.height(); ++y ) {
+						for( int x = 0; x < sdfBitmap.width(); ++x ) {
+								sdfBitmap( x, y ).r = 1.0f - sdfBitmap( x, y ).r;
+								sdfBitmap( x, y ).g = 1.0f - sdfBitmap( x, y ).g;
+								sdfBitmap( x, y ).b = 1.0f - sdfBitmap( x, y ).b;
+							}
+					}
+				}
 
 				// Copy bitmap
 				size_t dstOffset = ( renderGlyph.position.y * surfaceRowBytes ) + ( renderGlyph.position.x * surfacePixelInc );

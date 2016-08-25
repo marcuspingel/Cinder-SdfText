@@ -44,108 +44,120 @@ bool loadGlyph(Shape &output, FT_Face face, unsigned int glyphIndex, double *adv
 			default: return "unknown"; break;
 		}
 	};
-
-    if (nullptr == face)
-        return false;
-    FT_Error error = FT_Load_Glyph(face, glyphIndex, FT_LOAD_NO_SCALE);
-    if (error)
-        return false;
-    output.contours.clear();
-    output.inverseYAxis = false;
-    if (advance)
-        *advance = face->glyph->advance.x/64.;
+	
+	if (nullptr == face)
+		return false;
+	FT_Error error = FT_Load_Glyph(face, glyphIndex, FT_LOAD_NO_SCALE);
+	if (error)
+		return false;
+	output.contours.clear();
+	output.inverseYAxis = false;
+	if (advance)
+		*advance = face->glyph->advance.x/64.;
 	
 	float glyphScale = 2048.0f / face->units_per_EM;
 	
-    int last = -1;
-    // For each contour
-    for (int i = 0; i < face->glyph->outline.n_contours; ++i) {
-
-        Contour &contour = output.addContour();
-        int first = last+1;
-        last = face->glyph->outline.contours[i];
-
-        PointType state = NONE;
-        Point2 startPoint;
-        Point2 controlPoint[2];
-
-        // For each point on the contour
-        for (int round = 0, index = first; round == 0; ++index) {
-            // Close contour
-            if (index > last) {
-                index = first;
-                round++;
-            }
-
-            Point2 point( glyphScale * face->glyph->outline.points[index].x/64.,
-						  glyphScale * face->glyph->outline.points[index].y/64.);
-            PointType pointType = face->glyph->outline.tags[index]&1 ? PATH_POINT
-								: (face->glyph->outline.tags[index]&2 ? CUBIC_POINT : QUADRATIC_POINT);
-			
-			if( glyphIndex == 82 ) {
-//				std::cout << "state: " << pointTypeOutput( state ) << std::endl;
-//				std::cout << "pointType: " << pointTypeOutput( pointType ) << std::endl;
+	int last = -1;
+//	if ( glyphIndex == 83 || glyphIndex == 51 ) {
+//		std::cout << "-------------------------------------------" << std::endl;
+//		std::cout << "Num contours: " << face->glyph->outline.n_contours << " glyph: " << glyphIndex <<  std::endl;
+//	}
+	// For each contour
+	for (int i = 0; i < face->glyph->outline.n_contours; ++i) {
+		
+		Contour &contour = output.addContour();
+		int first = last+1;
+		int firstPathPoint = -1;
+		last = face->glyph->outline.contours[i];
+		
+		PointType state = NONE;
+		Point2 startPoint;
+		Point2 controlPoint[2];
+//		if ( glyphIndex == 83 || glyphIndex == 51 )
+//			std::cout << "Outer For Loop: " << i << std::endl;
+		// For each point on the contour
+		for (int round = 0, index = first; round == 0; ++index) {
+//			if ( glyphIndex == 83 || glyphIndex == 51 )
+//				std::cout << "round: " << round << " index: " << index << " first: " << first << " last: " << last << std::endl;
+			if (index > last) {
+				if (!(firstPathPoint >= 0))
+					return false;
+				index = first;
 			}
+			// Close contour
+			if (index == firstPathPoint)
+				++round;
+			
+			Point2 point( glyphScale * face->glyph->outline.points[index].x/64., glyphScale * face->glyph->outline.points[index].y/64.);
+			PointType pointType = face->glyph->outline.tags[index]&1 ? PATH_POINT : face->glyph->outline.tags[index]&2 ? CUBIC_POINT : QUADRATIC_POINT;
+			
 			switch (state) {
-                case NONE:
-//                    if (!(pointType == PATH_POINT))
-//						return false;
-                    startPoint = point;
-                    state = PATH_POINT;
-					//std::cout << "In NONE: changing state to PATH_POINT" << std::endl;
-                    break;
-                case PATH_POINT:
-                    if (pointType == PATH_POINT) {
-                        contour.addEdge(new LinearSegment(startPoint, point));
-                        startPoint = point;
-                    } else {
-                        controlPoint[0] = point;
-                        state = pointType;
-                    }
-					//std::cout << "In PATH_POINT: state: " << pointTypeOutput( state ) << std::endl;
-                    break;
-                case QUADRATIC_POINT:
-                    if (!(pointType != CUBIC_POINT))
+				case NONE:
+					if (pointType == PATH_POINT) {
+						firstPathPoint = index;
+						startPoint = point;
+						state = PATH_POINT;
+					}
+					
+//					if ( glyphIndex == 83 || glyphIndex == 51 )
+//						std::cout << "state: " << pointTypeOutput( state ) << " pointType: " << pointTypeOutput( pointType ) << std::endl;
+					break;
+				case PATH_POINT:
+					if (pointType == PATH_POINT) {
+						contour.addEdge(new LinearSegment(startPoint, point));
+						startPoint = point;
+					} else {
+						controlPoint[0] = point;
+						state = pointType;
+					}
+//					if ( glyphIndex == 83 || glyphIndex == 51 )
+//						std::cout << "state: " << pointTypeOutput( state ) << " pointType: " << pointTypeOutput( pointType ) << std::endl;
+					break;
+				case QUADRATIC_POINT:
+					if (!(pointType != CUBIC_POINT))
 						return false;
-                    if (pointType == PATH_POINT) {
-                        contour.addEdge(new QuadraticSegment(startPoint, controlPoint[0], point));
-                        startPoint = point;
-                        state = PATH_POINT;
-                    } else {
-                        Point2 midPoint = .5*controlPoint[0]+.5*point;
-                        contour.addEdge(new QuadraticSegment(startPoint, controlPoint[0], midPoint));
-                        startPoint = midPoint;
-                        controlPoint[0] = point;
-                    }
-					//std::cout << "In QUADRATIC_POINT: state: " << pointTypeOutput( state ) << std::endl;
-                    break;
-                case CUBIC_POINT:
-                    if (!(pointType == CUBIC_POINT))
-						return false;
-                    controlPoint[1] = point;
+					if (pointType == PATH_POINT) {
+						contour.addEdge(new QuadraticSegment(startPoint, controlPoint[0], point));
+						startPoint = point;
+						state = PATH_POINT;
+					} else {
+						Point2 midPoint = .5*controlPoint[0]+.5*point;
+						contour.addEdge(new QuadraticSegment(startPoint, controlPoint[0], midPoint));
+						startPoint = midPoint;
+						controlPoint[0] = point;
+					}
+					if ( glyphIndex == 83 || glyphIndex == 51 )
+						std::cout << "state: " << pointTypeOutput( state ) << " pointType: " << pointTypeOutput( pointType ) << std::endl;
+					break;
+				case CUBIC_POINT:
+					if (!(pointType == CUBIC_POINT))
+						return false;;
+					controlPoint[1] = point;
 					state = CUBIC_POINT2;
-					//std::cout << "In CUBIC_POINT: state: " << pointTypeOutput( state ) << std::endl;
-                    break;
-                case CUBIC_POINT2:
-                    if (!(pointType != QUADRATIC_POINT))
+//					if ( glyphIndex == 83 || glyphIndex == 51 )
+//						std::cout << "state: " << pointTypeOutput( state ) << " pointType: " << pointTypeOutput( pointType ) << std::endl;
+					break;
+				case CUBIC_POINT2:
+					if (!(pointType != QUADRATIC_POINT))
 						return false;
-                    if (pointType == PATH_POINT) {
-                        contour.addEdge(new CubicSegment(startPoint, controlPoint[0], controlPoint[1], point));
-                        startPoint = point;
-                    } else {
-                        Point2 midPoint = .5*controlPoint[1]+.5*point;
-                        contour.addEdge(new CubicSegment(startPoint, controlPoint[0], controlPoint[1], midPoint));
-                        startPoint = midPoint;
-                        controlPoint[0] = point;
-                    }
+					if (pointType == PATH_POINT) {
+						contour.addEdge(new CubicSegment(startPoint, controlPoint[0], controlPoint[1], point));
+						startPoint = point;
+					} else {
+						Point2 midPoint = .5*controlPoint[1]+.5*point;
+						contour.addEdge(new CubicSegment(startPoint, controlPoint[0], controlPoint[1], midPoint));
+						startPoint = midPoint;
+						controlPoint[0] = point;
+					}
 					state = pointType;
-					//std::cout << "In CUBIC_POINT2: state: " << pointTypeOutput( state ) << std::endl;
-                    break;
-            }
-
-        }
-    }
-    return true;
+//					if ( glyphIndex == 83 || glyphIndex == 51 )
+//						std::cout << "state: " << pointTypeOutput( state ) << " pointType: " << pointTypeOutput( pointType ) << std::endl;
+					break;
+			}
+			
+		}
+	}
+	return true;
 }
 
 bool loadChar(Shape &output, FT_Face face, unsigned int charCode, double *advance) {
