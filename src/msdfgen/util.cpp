@@ -34,17 +34,6 @@ bool loadGlyph(Shape &output, FT_Face face, unsigned int glyphIndex, double *adv
         CUBIC_POINT2
     };
 	
-	auto pointTypeOutput = []( PointType type ) {
-		switch ( type ) {
-			case NONE: return "NONE"; break;
-			case PATH_POINT: return "PATH_POINT"; break;
-			case QUADRATIC_POINT: return "QUADRATIC_POINT"; break;
-			case CUBIC_POINT: return "CUBIC_POINT"; break;
-			case CUBIC_POINT2: return "CUBIC_POINT2"; break;
-			default: return "unknown"; break;
-		}
-	};
-	
 	if (nullptr == face)
 		return false;
 	FT_Error error = FT_Load_Glyph(face, glyphIndex, FT_LOAD_NO_SCALE);
@@ -58,10 +47,6 @@ bool loadGlyph(Shape &output, FT_Face face, unsigned int glyphIndex, double *adv
 	float glyphScale = 2048.0f / face->units_per_EM;
 	
 	int last = -1;
-//	if ( glyphIndex == 83 || glyphIndex == 51 ) {
-//		std::cout << "-------------------------------------------" << std::endl;
-//		std::cout << "Num contours: " << face->glyph->outline.n_contours << " glyph: " << glyphIndex <<  std::endl;
-//	}
 	// For each contour
 	for (int i = 0; i < face->glyph->outline.n_contours; ++i) {
 		
@@ -73,12 +58,7 @@ bool loadGlyph(Shape &output, FT_Face face, unsigned int glyphIndex, double *adv
 		PointType state = NONE;
 		Point2 startPoint;
 		Point2 controlPoint[2];
-//		if ( glyphIndex == 83 || glyphIndex == 51 )
-//			std::cout << "Outer For Loop: " << i << std::endl;
-		// For each point on the contour
 		for (int round = 0, index = first; round == 0; ++index) {
-//			if ( glyphIndex == 83 || glyphIndex == 51 )
-//				std::cout << "round: " << round << " index: " << index << " first: " << first << " last: " << last << std::endl;
 			if (index > last) {
 				if (!(firstPathPoint >= 0))
 					return false;
@@ -97,10 +77,14 @@ bool loadGlyph(Shape &output, FT_Face face, unsigned int glyphIndex, double *adv
 						firstPathPoint = index;
 						startPoint = point;
 						state = PATH_POINT;
+					} else if((face->glyph->outline.tags[first] == FT_Curve_Tag_Conic) && (face->glyph->outline.tags[last] == FT_Curve_Tag_Conic)) {
+						firstPathPoint = index;
+						Point2 firstPoint( glyphScale * face->glyph->outline.points[first].x/64., glyphScale * face->glyph->outline.points[first].y/64.);
+						Point2 lastPoint( glyphScale * face->glyph->outline.points[last].x/64., glyphScale * face->glyph->outline.points[last].y/64.);
+						startPoint = .5*(firstPoint + lastPoint);
+						controlPoint[0] = point;
+						state = QUADRATIC_POINT;
 					}
-					
-//					if ( glyphIndex == 83 || glyphIndex == 51 )
-//						std::cout << "state: " << pointTypeOutput( state ) << " pointType: " << pointTypeOutput( pointType ) << std::endl;
 					break;
 				case PATH_POINT:
 					if (pointType == PATH_POINT) {
@@ -110,8 +94,6 @@ bool loadGlyph(Shape &output, FT_Face face, unsigned int glyphIndex, double *adv
 						controlPoint[0] = point;
 						state = pointType;
 					}
-//					if ( glyphIndex == 83 || glyphIndex == 51 )
-//						std::cout << "state: " << pointTypeOutput( state ) << " pointType: " << pointTypeOutput( pointType ) << std::endl;
 					break;
 				case QUADRATIC_POINT:
 					if (!(pointType != CUBIC_POINT))
@@ -126,16 +108,12 @@ bool loadGlyph(Shape &output, FT_Face face, unsigned int glyphIndex, double *adv
 						startPoint = midPoint;
 						controlPoint[0] = point;
 					}
-					if ( glyphIndex == 83 || glyphIndex == 51 )
-						std::cout << "state: " << pointTypeOutput( state ) << " pointType: " << pointTypeOutput( pointType ) << std::endl;
 					break;
 				case CUBIC_POINT:
 					if (!(pointType == CUBIC_POINT))
 						return false;;
 					controlPoint[1] = point;
 					state = CUBIC_POINT2;
-//					if ( glyphIndex == 83 || glyphIndex == 51 )
-//						std::cout << "state: " << pointTypeOutput( state ) << " pointType: " << pointTypeOutput( pointType ) << std::endl;
 					break;
 				case CUBIC_POINT2:
 					if (!(pointType != QUADRATIC_POINT))
@@ -150,8 +128,6 @@ bool loadGlyph(Shape &output, FT_Face face, unsigned int glyphIndex, double *adv
 						controlPoint[0] = point;
 					}
 					state = pointType;
-//					if ( glyphIndex == 83 || glyphIndex == 51 )
-//						std::cout << "state: " << pointTypeOutput( state ) << " pointType: " << pointTypeOutput( pointType ) << std::endl;
 					break;
 			}
 			
