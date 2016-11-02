@@ -2,9 +2,14 @@ if( NOT TARGET Cinder-SdfText )
 
 	get_filename_component( CINDER_SDFTEXT_SOURCE_PATH "${CMAKE_CURRENT_LIST_DIR}/../../src" ABSOLUTE )
 	get_filename_component( CINDER_SDFTEXT_INCLUDE_PATH "${CMAKE_CURRENT_LIST_DIR}/../../include" ABSOLUTE )
-	get_filename_component( CINDER_PATH "${CMAKE_CURRENT_LIST_DIR}/../../../.." ABSOLUTE )
-
-	list( APPEND CINDER_SDFTEXT_SOURCES 
+  message( "${CINDER_PATH}" ) 
+  if( NOT EXISTS ${CINDER_PATH} )
+    message( "couldn't find the path" )
+    get_filename_component( CINDER_PATH "${CMAKE_CURRENT_LIST_DIR}/../../../.." ABSOLUTE )
+  endif()
+  message( "CINDER_PATH: ${CINDER_PATH}" )
+	
+  list( APPEND CINDER_SDFTEXT_SOURCES 
 			"${CINDER_SDFTEXT_SOURCE_PATH}/cinder/gl/SdfText.cpp"
 			"${CINDER_SDFTEXT_SOURCE_PATH}/cinder/gl/SdfTextMesh.cpp"
 			"${CINDER_SDFTEXT_SOURCE_PATH}/msdfgen/core/Bitmap.cpp"
