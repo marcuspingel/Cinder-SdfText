@@ -300,6 +300,15 @@ public:
 	std::vector<std::pair<SdfText::Font::Glyph,vec2>>		getGlyphPlacements( const std::string &str, const Rectf &fitRect, const DrawOptions &options = DrawOptions() ) const;
 	//! Returns a  word-wrapped vector of glyph/placement pairs representing \a str fit inside \a fitRect, suitable for use with drawGlyphs. Useful for caching placement and optimizing batching. Mac & iOS only.
 	std::vector<std::pair<SdfText::Font::Glyph,vec2>>		getGlyphPlacementsWrapped( const std::string &str, const Rectf &fitRect, const DrawOptions &options = DrawOptions() ) const;
+	
+	struct InstanceVertex {
+		Font::Glyph glyph;
+		vec2 pos;
+		vec2 size;
+		vec4 texCoords;
+	};
+	
+	std::vector<InstanceVertex> getGlyphVertices( const Font::GlyphMeasuresList &glyphs, ci::Rectf *rect, const DrawOptions &options = DrawOptions(), const std::vector<ColorA8u> &colors = std::vector<ColorA8u>()  );
 
 	//! Returns the font the TextureFont represents
 	const SdfText::Font&	getFont() const { return mFont; }
