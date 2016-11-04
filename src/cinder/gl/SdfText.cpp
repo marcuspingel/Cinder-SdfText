@@ -789,7 +789,7 @@ void SdfTextManager::acquireFontNamesAndPaths()
 #elif defined( CINDER_LINUX )
 void SdfTextManager::acquireFontNamesAndPaths()
 {
-	if( ::FcInit() ) {
+	if( false && ::FcInit() ) {
 		::FcPattern   *pat = ::FcPatternCreate();
 		::FcObjectSet *os  = ::FcObjectSetBuild( FC_FILE, FC_FAMILY, FC_STYLE, (char *)0 );
 		::FcFontSet   *fs  = ::FcFontList (0, pat, os);
@@ -837,6 +837,7 @@ void SdfTextManager::acquireFontNamesAndPaths()
 					if( fs::exists( fontFilePath ) ) {
 						// Build font info
 						FontInfo fontInfo = FontInfo( fontKey, fontName, fontFilePath );
+                        CI_LOG_V( "Name: " << fontName );
 						mFontInfos.push_back( fontInfo );
 						mFontNames.push_back( fontName );
 					}
