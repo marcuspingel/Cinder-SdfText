@@ -596,7 +596,7 @@ SdfTextManager* SdfTextManager::instance()
 	if( nullptr == SdfTextManager::sInstance ) {
 		SdfTextManager::sInstance =  new SdfTextManager();
 		if( nullptr != SdfTextManager::sInstance ) {
-			ci::app::App::get()->getSignalShouldQuit().connect( SdfTextFontManager_destroyStaticInstance );
+//			ci::app::App::get()->getSignalShouldQuit().connect( SdfTextFontManager_destroyStaticInstance );
 		}
 	}
 	
