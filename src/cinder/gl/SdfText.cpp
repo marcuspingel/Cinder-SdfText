@@ -2607,7 +2607,7 @@ std::vector<SdfText::InstanceVertex> SdfText::getGlyphVertices( const Font::Glyp
 			
 			InstanceVertex vert;
 			vert.glyph = glyphIt->first;
-			vert.pos = destRect.getUpperLeft() + (destRect.getSize() / 2.0f);
+			vert.pos = destRect.getUpperLeft();
 			vert.size = destRect.getSize();
 			vert.texCoords = vec4( srcTexCoords.x1, srcTexCoords.y1, srcTexCoords.x2, srcTexCoords.y2 );
 			ret.emplace_back( std::move( vert ) );
